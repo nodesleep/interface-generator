@@ -29,7 +29,7 @@ const copied = ref<boolean>(false);
 const options = reactive<ConversionOptions>({
   detectEnums: true,
   camelCase: false,
-  markOptional: true,
+  markOptional: false,
   strictNullChecks: true,
 });
 
@@ -257,21 +257,38 @@ function capitalizeFirstLetter(string: string): string {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100 py-8 px-4">
-    <div class="max-w-6xl mx-auto">
-      <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">
+  <div
+    class="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100"
+  >
+    <div class="bg-sky-600 py-2 text-xs text-center">
+      <a
+        href="https://buymeacoffee.com/nodesleep"
+        class="text-white font-medium hover:underline transition-all"
+      >
+        If you found this app useful, consider buying me a coffee by clicking
+        here.
+      </a>
+    </div>
+    <div class="max-w-6xl mx-auto py-8 px-4">
+      <h1
+        class="text-3xl font-bold mb-8 text-center text-black dark:text-sky-400"
+      >
         JSON to TypeScript Interface Generator
       </h1>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Input Section -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <h2 class="text-xl font-semibold mb-4 text-gray-700">JSON Input</h2>
+        <div
+          class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700"
+        >
+          <h2 class="text-xl font-semibold mb-4 text-sky-600 dark:text-sky-400">
+            JSON Input
+          </h2>
 
           <textarea
             v-model="jsonInput"
             placeholder="Paste your JSON here..."
-            class="w-full h-64 p-3 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full h-64 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md font-mono text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all duration-300 resize-none"
             @input="validateJsonInput"
           ></textarea>
 
@@ -280,41 +297,41 @@ function capitalizeFirstLetter(string: string): string {
           </p>
 
           <div class="mt-6 space-y-4">
-            <h3 class="font-medium text-gray-700">Options</h3>
+            <h3 class="font-medium text-sky-600 dark:text-sky-400">Options</h3>
 
             <div class="flex flex-col space-y-3">
-              <label class="flex items-center space-x-2">
+              <label class="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
                   v-model="options.detectEnums"
-                  class="rounded text-blue-600 focus:ring-blue-500"
+                  class="rounded bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-sky-500 focus:ring-sky-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 />
                 <span>Detect and generate enums (for string arrays)</span>
               </label>
 
-              <label class="flex items-center space-x-2">
+              <label class="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
                   v-model="options.camelCase"
-                  class="rounded text-blue-600 focus:ring-blue-500"
+                  class="rounded bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-sky-500 focus:ring-sky-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 />
                 <span>Convert keys to camelCase</span>
               </label>
 
-              <label class="flex items-center space-x-2">
+              <label class="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
                   v-model="options.markOptional"
-                  class="rounded text-blue-600 focus:ring-blue-500"
+                  class="rounded bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-sky-500 focus:ring-sky-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 />
                 <span>Mark properties as optional</span>
               </label>
 
-              <label class="flex items-center space-x-2">
+              <label class="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
                   v-model="options.strictNullChecks"
-                  class="rounded text-blue-600 focus:ring-blue-500"
+                  class="rounded bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-sky-500 focus:ring-sky-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 />
                 <span>Use strict null checks</span>
               </label>
@@ -324,7 +341,7 @@ function capitalizeFirstLetter(string: string): string {
                 <input
                   type="text"
                   v-model="interfaceName"
-                  class="border border-gray-300 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-3 py-1 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all duration-300"
                 />
               </label>
             </div>
@@ -332,7 +349,7 @@ function capitalizeFirstLetter(string: string): string {
 
           <button
             @click="generateTypeScript"
-            class="mt-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            class="mt-6 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50 transition-all duration-300 shadow-sm font-medium"
             :disabled="!isValidJson"
           >
             Generate TypeScript
@@ -340,30 +357,32 @@ function capitalizeFirstLetter(string: string): string {
         </div>
 
         <!-- Output Section -->
-        <div class="bg-white rounded-lg shadow-md p-6">
+        <div
+          class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700"
+        >
           <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold text-gray-700">
+            <h2 class="text-xl font-semibold text-sky-600 dark:text-sky-400">
               TypeScript Output
             </h2>
 
             <button
               @click="copyToClipboard"
-              class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+              class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors duration-300 flex items-center space-x-1"
               v-if="typescriptOutput"
             >
-              {{ copied ? "Copied!" : "Copy" }}
+              <span>{{ copied ? "Copied!" : "Copy" }}</span>
             </button>
           </div>
 
           <pre
             v-if="typescriptOutput"
-            class="bg-gray-50 p-4 rounded-md border border-gray-200 h-64 overflow-auto font-mono text-sm"
+            class="bg-gray-50 dark:bg-gray-800 p-4 rounded-md border border-gray-200 dark:border-gray-700 h-64 overflow-auto font-mono text-sm text-gray-800 dark:text-gray-200 scrollbar"
             >{{ typescriptOutput }}</pre
           >
 
           <div
             v-else
-            class="bg-gray-50 p-4 rounded-md border border-gray-200 h-64 flex items-center justify-center text-gray-500"
+            class="bg-gray-50 dark:bg-gray-800 p-4 rounded-md border border-gray-200 dark:border-gray-700 h-64 flex items-center justify-center text-gray-500 dark:text-gray-400"
           >
             Generate TypeScript to see the output here
           </div>
@@ -374,7 +393,7 @@ function capitalizeFirstLetter(string: string): string {
       <div class="mt-8 text-center">
         <button
           @click="loadSampleJson"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+          class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all duration-300 shadow-sm"
         >
           Load Sample JSON
         </button>
@@ -382,3 +401,36 @@ function capitalizeFirstLetter(string: string): string {
     </div>
   </div>
 </template>
+
+<style>
+.scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 4px;
+}
+
+.dark .scrollbar::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+.scrollbar::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+
+.dark .scrollbar::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+.scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.dark .scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+</style>
