@@ -1,0 +1,388 @@
+<script setup lang="ts">
+import { ref, reactive, computed } from "vue";
+
+interface ConversionOptions {
+  detectEnums: boolean;
+  camelCase: boolean;
+  markOptional: boolean;
+  strictNullChecks: boolean;
+}
+
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
+interface InterfaceProperties {
+  [key: string]: string;
+}
+
+const jsonInput = ref<string>("");
+const jsonError = ref<string>("");
+const typescriptOutput = ref<string>("");
+const interfaceName = ref<string>("RootObject");
+const copied = ref<boolean>(false);
+
+const options = reactive<ConversionOptions>({
+  detectEnums: true,
+  camelCase: false,
+  markOptional: true,
+  strictNullChecks: true,
+});
+
+const isValidJson = computed<boolean>(() => {
+  return jsonInput.value !== "" && !jsonError.value;
+});
+
+function validateJsonInput(): void {
+  if (!jsonInput.value) {
+    jsonError.value = "";
+    return;
+  }
+
+  try {
+    JSON.parse(jsonInput.value);
+    jsonError.value = "";
+  } catch (error) {
+    if (error instanceof Error) {
+      jsonError.value = `Invalid JSON: ${error.message}`;
+    } else {
+      jsonError.value = "Invalid JSON: Unknown error";
+    }
+  }
+}
+
+function generateTypeScript(): void {
+  try {
+    const parsed = JSON.parse(jsonInput.value) as JsonValue;
+    typescriptOutput.value = convertJsonToTypeScript(
+      parsed,
+      interfaceName.value
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      jsonError.value = `Error generating TypeScript: ${error.message}`;
+    } else {
+      jsonError.value = "Error generating TypeScript: Unknown error";
+    }
+  }
+}
+
+function copyToClipboard(): void {
+  navigator.clipboard.writeText(typescriptOutput.value);
+  copied.value = true;
+  setTimeout(() => {
+    copied.value = false;
+  }, 2000);
+}
+
+function loadSampleJson(): void {
+  jsonInput.value = JSON.stringify(
+    {
+      id: 1,
+      name: "John Doe",
+      email: "john@example.com",
+      is_active: true,
+      score: 85.5,
+      roles: ["admin", "user", "editor"],
+      address: {
+        street: "123 Main St",
+        city: "Boston",
+        zip: "02108",
+        coordinates: {
+          lat: 42.3601,
+          lng: -71.0589,
+        },
+      },
+      tags: ["important", "customer"],
+      metadata: null,
+      registration_date: "2023-01-15T08:30:00Z",
+    },
+    null,
+    2
+  );
+
+  validateJsonInput();
+}
+
+// Core conversion logic
+function convertJsonToTypeScript(json: JsonValue, rootName: string): string {
+  const interfaces = new Map<string, InterfaceProperties>();
+  const enumTypes = new Map<string, string[]>();
+
+  // Generate the root interface
+  const rootType = generateTypeDefinition(
+    json,
+    rootName,
+    interfaces,
+    enumTypes
+  );
+
+  // Combine all interfaces and enums into a single output
+  let output = "";
+
+  // Add enums first
+  if (options.detectEnums) {
+    for (const [enumName, enumValues] of enumTypes) {
+      output += `enum ${enumName} {\n`;
+      enumValues.forEach((value, index) => {
+        const enumKey = value
+          .replace(/[^a-zA-Z0-9_]/g, "_")
+          .replace(/^[0-9]/, "_$&");
+        output += `  ${enumKey} = "${value}"${
+          index < enumValues.length - 1 ? "," : ""
+        }\n`;
+      });
+      output += "}\n\n";
+    }
+  }
+
+  // Add interfaces
+  for (const [name, properties] of interfaces) {
+    output += `interface ${name} {\n`;
+    for (const [key, type] of Object.entries(properties)) {
+      const formattedKey = formatPropertyKey(key);
+      const optional = options.markOptional ? "?" : "";
+      output += `  ${formattedKey}${optional}: ${type};\n`;
+    }
+    output += "}\n\n";
+  }
+
+  return output.trim();
+}
+
+function generateTypeDefinition(
+  value: JsonValue,
+  name: string,
+  interfaces: Map<string, InterfaceProperties>,
+  enumTypes: Map<string, string[]>,
+  path = ""
+): string {
+  if (value === null) {
+    return options.strictNullChecks ? "null" : "any";
+  }
+
+  // Handle different types
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return "any[]";
+    }
+
+    // Check for potential enum (array of strings)
+    if (
+      options.detectEnums &&
+      value.length > 0 &&
+      value.every((item) => typeof item === "string")
+    ) {
+      const enumName = `${name}Enum`;
+      const stringItems = value.filter(
+        (item) => typeof item === "string"
+      ) as string[];
+      enumTypes.set(enumName, [...new Set(stringItems)]);
+      return enumName;
+    }
+
+    // Find common type for array items
+    const itemTypes = value.map((item) =>
+      generateTypeDefinition(
+        item,
+        `${name}Item`,
+        interfaces,
+        enumTypes,
+        `${path}.items`
+      )
+    );
+
+    // If all items have the same type, use that type
+    if (new Set(itemTypes).size === 1) {
+      return `${itemTypes[0]}[]`;
+    }
+
+    // Otherwise, use union type
+    return `(${[...new Set(itemTypes)].join(" | ")})[]`;
+  }
+
+  // Handle object type
+  if (typeof value === "object") {
+    const interfaceName = name.replace(/[^a-zA-Z0-9_]/g, "");
+    const properties: InterfaceProperties = {};
+
+    for (const [key, val] of Object.entries(value)) {
+      const propName = options.camelCase ? toCamelCase(key) : key;
+      const propType = generateTypeDefinition(
+        val,
+        `${interfaceName}${capitalizeFirstLetter(propName)}`,
+        interfaces,
+        enumTypes,
+        `${path}.${propName}`
+      );
+
+      properties[key] = propType;
+    }
+
+    interfaces.set(interfaceName, properties);
+    return interfaceName;
+  }
+
+  // Handle primitive types
+  switch (typeof value) {
+    case "string":
+      return "string";
+    case "number":
+      return Number.isInteger(value) ? "number" : "number";
+    case "boolean":
+      return "boolean";
+    default:
+      return "any";
+  }
+}
+
+function formatPropertyKey(key: string): string {
+  let formattedKey = options.camelCase ? toCamelCase(key) : key;
+
+  // If the key has special characters, wrap it in quotes
+  if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(formattedKey)) {
+    formattedKey = `'${formattedKey}'`;
+  }
+
+  return formattedKey;
+}
+
+function toCamelCase(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+function capitalizeFirstLetter(string: string): string {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+</script>
+
+<template>
+  <div class="min-h-screen bg-gray-100 py-8 px-4">
+    <div class="max-w-6xl mx-auto">
+      <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">
+        JSON to TypeScript Interface Generator
+      </h1>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Input Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h2 class="text-xl font-semibold mb-4 text-gray-700">JSON Input</h2>
+
+          <textarea
+            v-model="jsonInput"
+            placeholder="Paste your JSON here..."
+            class="w-full h-64 p-3 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            @input="validateJsonInput"
+          ></textarea>
+
+          <p v-if="jsonError" class="mt-2 text-red-500 text-sm">
+            {{ jsonError }}
+          </p>
+
+          <div class="mt-6 space-y-4">
+            <h3 class="font-medium text-gray-700">Options</h3>
+
+            <div class="flex flex-col space-y-3">
+              <label class="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  v-model="options.detectEnums"
+                  class="rounded text-blue-600 focus:ring-blue-500"
+                />
+                <span>Detect and generate enums (for string arrays)</span>
+              </label>
+
+              <label class="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  v-model="options.camelCase"
+                  class="rounded text-blue-600 focus:ring-blue-500"
+                />
+                <span>Convert keys to camelCase</span>
+              </label>
+
+              <label class="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  v-model="options.markOptional"
+                  class="rounded text-blue-600 focus:ring-blue-500"
+                />
+                <span>Mark properties as optional</span>
+              </label>
+
+              <label class="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  v-model="options.strictNullChecks"
+                  class="rounded text-blue-600 focus:ring-blue-500"
+                />
+                <span>Use strict null checks</span>
+              </label>
+
+              <label class="flex items-center space-x-2">
+                <span>Root interface name:</span>
+                <input
+                  type="text"
+                  v-model="interfaceName"
+                  class="border border-gray-300 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </label>
+            </div>
+          </div>
+
+          <button
+            @click="generateTypeScript"
+            class="mt-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            :disabled="!isValidJson"
+          >
+            Generate TypeScript
+          </button>
+        </div>
+
+        <!-- Output Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-700">
+              TypeScript Output
+            </h2>
+
+            <button
+              @click="copyToClipboard"
+              class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+              v-if="typescriptOutput"
+            >
+              {{ copied ? "Copied!" : "Copy" }}
+            </button>
+          </div>
+
+          <pre
+            v-if="typescriptOutput"
+            class="bg-gray-50 p-4 rounded-md border border-gray-200 h-64 overflow-auto font-mono text-sm"
+            >{{ typescriptOutput }}</pre
+          >
+
+          <div
+            v-else
+            class="bg-gray-50 p-4 rounded-md border border-gray-200 h-64 flex items-center justify-center text-gray-500"
+          >
+            Generate TypeScript to see the output here
+          </div>
+        </div>
+      </div>
+
+      <!-- Sample JSON Button -->
+      <div class="mt-8 text-center">
+        <button
+          @click="loadSampleJson"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+        >
+          Load Sample JSON
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
