@@ -113,13 +113,8 @@ function convertJsonToTypeScript(json: JsonValue, rootName: string): string {
   const interfaces = new Map<string, InterfaceProperties>();
   const enumTypes = new Map<string, string[]>();
 
-  // Generate the root interface
-  const rootType = generateTypeDefinition(
-    json,
-    rootName,
-    interfaces,
-    enumTypes
-  );
+  // Generate the root interface - calling without storing the unused return value
+  generateTypeDefinition(json, rootName, interfaces, enumTypes);
 
   // Combine all interfaces and enums into a single output
   let output = "";
@@ -232,7 +227,8 @@ function generateTypeDefinition(
     case "string":
       return "string";
     case "number":
-      return Number.isInteger(value) ? "number" : "number";
+      // Simplified return statement - no need for ternary that returns the same value
+      return "number";
     case "boolean":
       return "boolean";
     default:
