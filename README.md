@@ -101,20 +101,6 @@ A browser-based tool that converts JSON data into TypeScript interfaces with con
    }
    ```
 
-## Project Structure
-
-```
-/
-├── public/              # Static assets
-├── src/
-│   ├── App.vue          # Main app component
-│   ├── components/      # Vue components
-│   │   └── JsonToTs.vue # Main converter component
-│   ├── main.ts          # Application entry point
-│   └── utils/           # Utility functions
-└── index.html           # HTML template
-```
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
